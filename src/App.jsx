@@ -24,17 +24,17 @@ function App() {
   const [successMessage, setSuccessMessage] =
     useState("");
 
-  /* ÜRÜNLER */
-
   const [products, setProducts] = useState([]);
 
-  /* FIREBASE PRODUCTS ÇEK */
+  const isMobile = window.innerWidth < 700;
+
+  /* PRODUCTS */
 
   useEffect(() => {
     const q = query(
-  collection(db, "products"),
-  orderBy("createdAt", "desc")
-);
+      collection(db, "products"),
+      orderBy("createdAt", "desc")
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = [];
@@ -52,7 +52,7 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  /* ÜRÜN EKLE */
+  /* ADD PRODUCT */
 
   const addToOrder = (product, quantity) => {
     const existingProduct = orders.find(
@@ -82,14 +82,14 @@ function App() {
     }
   };
 
-  /* TOPLAM */
+  /* TOTAL */
 
   const totalQuantity = orders.reduce(
     (total, item) => total + Number(item.quantity),
     0
   );
 
-  /* SİPARİŞ GÖNDER */
+  /* SEND ORDER */
 
   const sendOrder = async () => {
     if (!marketName || orders.length === 0) {
@@ -160,16 +160,16 @@ function App() {
       style={{
         backgroundColor: "#f5f7fb",
         minHeight: "100vh",
-        padding: "20px",
+        padding: isMobile ? "12px" : "20px",
         fontFamily: "Arial",
       }}
     >
-      {/* MARKET ADI */}
+      {/* MARKET */}
 
       <div
         style={{
           maxWidth: "500px",
-          margin: "0 auto 30px auto",
+          margin: "0 auto 20px auto",
         }}
       >
         <input
@@ -181,10 +181,14 @@ function App() {
           }
           style={{
             width: "100%",
-            padding: "18px",
-            borderRadius: "14px",
+            padding: isMobile
+              ? "15px"
+              : "18px",
+            borderRadius: "16px",
             border: "1px solid #ddd",
-            fontSize: "18px",
+            fontSize: isMobile
+              ? "16px"
+              : "18px",
             boxSizing: "border-box",
             color: "#111",
             backgroundColor: "#fff",
@@ -192,34 +196,38 @@ function App() {
         />
       </div>
 
-      {/* BAŞLIK */}
+      {/* TITLE */}
 
       <h1
         style={{
           textAlign: "center",
           color: "#0B63C9",
-          fontSize: "38px",
-          marginBottom: "20px",
-          fontWeight: "800",
+          fontSize: isMobile
+            ? "28px"
+            : "42px",
+          lineHeight: "1.1",
+          marginBottom: "22px",
+          fontWeight: "900",
+          padding: "0 10px",
         }}
       >
         AKMEMBA TOPTAN SİPARİŞ
       </h1>
 
-      {/* BAŞARI MESAJI */}
+      {/* SUCCESS */}
 
       {successMessage && (
         <div
           style={{
             maxWidth: "500px",
-            margin: "0 auto 30px auto",
+            margin: "0 auto 25px auto",
             backgroundColor: "#16a34a",
             color: "#fff",
-            padding: "16px",
-            borderRadius: "14px",
+            padding: "15px",
+            borderRadius: "16px",
             textAlign: "center",
             fontWeight: "700",
-            fontSize: "18px",
+            fontSize: "16px",
             boxShadow:
               "0 4px 12px rgba(0,0,0,0.15)",
           }}
@@ -228,29 +236,42 @@ function App() {
         </div>
       )}
 
-      {/* SİPARİŞ ÖZETİ */}
+      {/* ORDER SUMMARY */}
 
       <div
         style={{
           maxWidth: "900px",
-          margin: "0 auto 40px auto",
+          margin: "0 auto 24px auto",
           backgroundColor: "#ffffff",
-          borderRadius: "20px",
-          padding: "25px",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+          borderRadius: "22px",
+          padding: isMobile
+            ? "18px"
+            : "25px",
+          boxShadow:
+            "0 4px 14px rgba(0,0,0,0.08)",
         }}
       >
         <h2
           style={{
-            marginBottom: "20px",
+            marginBottom: "18px",
             color: "#0B63C9",
+            fontSize: isMobile
+              ? "24px"
+              : "30px",
           }}
         >
           Sipariş Özeti
         </h2>
 
         {orders.length === 0 ? (
-          <p>Henüz ürün eklenmedi.</p>
+          <p
+            style={{
+              color: "#777",
+              fontSize: "16px",
+            }}
+          >
+            Henüz ürün eklenmedi.
+          </p>
         ) : (
           <>
             {orders.map((item) => (
@@ -260,10 +281,14 @@ function App() {
                   display: "flex",
                   justifyContent:
                     "space-between",
+                  gap: "10px",
                   marginBottom: "12px",
                   borderBottom:
                     "1px solid #eee",
                   paddingBottom: "10px",
+                  fontSize: isMobile
+                    ? "14px"
+                    : "16px",
                 }}
               >
                 <span>{item.title}</span>
@@ -279,6 +304,9 @@ function App() {
             <h3
               style={{
                 color: "#111",
+                fontSize: isMobile
+                  ? "18px"
+                  : "22px",
               }}
             >
               Toplam Ürün Adedi:
@@ -291,13 +319,17 @@ function App() {
               disabled={loading}
               style={{
                 width: "100%",
-                marginTop: "25px",
-                padding: "18px",
+                marginTop: "20px",
+                padding: isMobile
+                  ? "16px"
+                  : "18px",
                 backgroundColor: "#0B63C9",
                 color: "#fff",
                 border: "none",
-                borderRadius: "14px",
-                fontSize: "18px",
+                borderRadius: "16px",
+                fontSize: isMobile
+                  ? "16px"
+                  : "18px",
                 fontWeight: "700",
                 cursor: "pointer",
               }}
@@ -310,16 +342,18 @@ function App() {
         )}
       </div>
 
-      {/* ÜRÜNLER */}
+      {/* PRODUCTS */}
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: "25px",
+          gridTemplateColumns: isMobile
+            ? "repeat(2, 1fr)"
+            : "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: isMobile ? "12px" : "25px",
           maxWidth: "1400px",
           margin: "0 auto",
+          alignItems: "start",
         }}
       >
         {products.map((product) => (
