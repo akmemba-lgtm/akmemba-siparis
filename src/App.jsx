@@ -14,6 +14,7 @@ import {
   updateDoc,
   doc,
   onSnapshot,
+  deleteDoc,
 } from "firebase/firestore";
 
 function App() {
@@ -25,6 +26,8 @@ function App() {
     useState("");
 
   const [products, setProducts] = useState([]);
+
+  const [myOrders, setMyOrders] = useState([]);
 
   const isMobile = window.innerWidth < 700;
 
@@ -51,6 +54,32 @@ function App() {
 
     return () => unsubscribe();
   }, []);
+
+  /* MY ORDERS */
+
+  useEffect(() => {
+    if (!marketName) return;
+
+    const q = query(
+      collection(db, "orders"),
+      where("marketName", "==", marketName)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = [];
+
+      snapshot.forEach((docItem) => {
+        list.push({
+          firebaseId: docItem.id,
+          ...docItem.data(),
+        });
+      });
+
+      setMyOrders(list);
+    });
+
+    return () => unsubscribe();
+  }, [marketName]);
 
   /* ADD PRODUCT */
 
@@ -155,6 +184,47 @@ function App() {
     }
   };
 
+  /* EDIT ORDER */
+
+  const editOrder = (order) => {
+    if (order.status !== "Aktif") return;
+
+    setOrders(order.orders);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+
+    setSuccessMessage(
+      "✏️ Sipariş düzenleme modunda"
+    );
+
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 3000);
+  };
+
+  /* CANCEL ORDER */
+
+  const cancelOrder = async (firebaseId) => {
+    try {
+      await deleteDoc(
+        doc(db, "orders", firebaseId)
+      );
+
+      setSuccessMessage(
+        "❌ Sipariş iptal edildi"
+      );
+
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <div
       style={{
@@ -228,11 +298,147 @@ function App() {
             textAlign: "center",
             fontWeight: "700",
             fontSize: "16px",
-            boxShadow:
-              "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
           {successMessage}
+        </div>
+      )}
+
+      {/* MY ORDERS */}
+
+      {marketName && myOrders.length > 0 && (
+        <div
+          style={{
+            maxWidth: "900px",
+            margin: "0 auto 24px auto",
+            backgroundColor: "#fff",
+            borderRadius: "22px",
+            padding: isMobile
+              ? "18px"
+              : "25px",
+            boxShadow:
+              "0 4px 14px rgba(0,0,0,0.08)",
+          }}
+        >
+          <h2
+            style={{
+              color: "#0B63C9",
+              marginBottom: "20px",
+            }}
+          >
+            Siparişlerim
+          </h2>
+
+          {myOrders.map((order) => (
+            <div
+              key={order.firebaseId}
+              style={{
+                border:
+                  "1px solid rgba(0,0,0,0.08)",
+                borderRadius: "18px",
+                padding: "16px",
+                marginBottom: "18px",
+                backgroundColor: "#fafafa",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent:
+                    "space-between",
+                  marginBottom: "12px",
+                }}
+              >
+                <strong>
+                  {order.status}
+                </strong>
+
+                <span>
+                  {order.totalQuantity} adet
+                </span>
+              </div>
+
+              {order.orders.map(
+                (item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span>
+                      {item.title}
+                    </span>
+
+                    <strong>
+                      {item.quantity}
+                    </strong>
+                  </div>
+                )
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "16px",
+                }}
+              >
+                <button
+                  disabled={
+                    order.status !== "Aktif"
+                  }
+                  onClick={() =>
+                    editOrder(order)
+                  }
+                  style={{
+                    flex: 1,
+                    backgroundColor:
+                      order.status !== "Aktif"
+                        ? "#ccc"
+                        : "#0B63C9",
+                    color: "#fff",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  Düzenle
+                </button>
+
+                <button
+                  disabled={
+                    order.status !== "Aktif"
+                  }
+                  onClick={() =>
+                    cancelOrder(
+                      order.firebaseId
+                    )
+                  }
+                  style={{
+                    flex: 1,
+                    backgroundColor:
+                      order.status !== "Aktif"
+                        ? "#ccc"
+                        : "#dc2626",
+                    color: "#fff",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  İptal Et
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -255,23 +461,13 @@ function App() {
           style={{
             marginBottom: "18px",
             color: "#0B63C9",
-            fontSize: isMobile
-              ? "24px"
-              : "30px",
           }}
         >
           Sipariş Özeti
         </h2>
 
         {orders.length === 0 ? (
-          <p
-            style={{
-              color: "#777",
-              fontSize: "16px",
-            }}
-          >
-            Henüz ürün eklenmedi.
-          </p>
+          <p>Henüz ürün eklenmedi.</p>
         ) : (
           <>
             {orders.map((item) => (
@@ -281,14 +477,10 @@ function App() {
                   display: "flex",
                   justifyContent:
                     "space-between",
-                  gap: "10px",
                   marginBottom: "12px",
                   borderBottom:
                     "1px solid #eee",
                   paddingBottom: "10px",
-                  fontSize: isMobile
-                    ? "14px"
-                    : "16px",
                 }}
               >
                 <span>{item.title}</span>
@@ -301,14 +493,7 @@ function App() {
 
             <hr style={{ margin: "20px 0" }} />
 
-            <h3
-              style={{
-                color: "#111",
-                fontSize: isMobile
-                  ? "18px"
-                  : "22px",
-              }}
-            >
+            <h3>
               Toplam Ürün Adedi:
               {" "}
               {totalQuantity}
@@ -320,16 +505,12 @@ function App() {
               style={{
                 width: "100%",
                 marginTop: "20px",
-                padding: isMobile
-                  ? "16px"
-                  : "18px",
+                padding: "18px",
                 backgroundColor: "#0B63C9",
                 color: "#fff",
                 border: "none",
                 borderRadius: "16px",
-                fontSize: isMobile
-                  ? "16px"
-                  : "18px",
+                fontSize: "18px",
                 fontWeight: "700",
                 cursor: "pointer",
               }}
