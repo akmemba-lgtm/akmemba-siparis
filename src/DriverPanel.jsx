@@ -23,9 +23,13 @@ function DriverPanel() {
     useState("orders");
 
   const [newTitle, setNewTitle] = useState("");
+
   const [newDescription, setNewDescription] =
     useState("");
+
   const [newImage, setNewImage] = useState("");
+
+  const isMobile = window.innerWidth < 700;
 
   /* SİPARİŞLER */
 
@@ -35,18 +39,21 @@ function DriverPanel() {
       orderBy("createdAt", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = [];
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = [];
 
-      snapshot.forEach((docItem) => {
-        list.push({
-          firebaseId: docItem.id,
-          ...docItem.data(),
+        snapshot.forEach((docItem) => {
+          list.push({
+            firebaseId: docItem.id,
+            ...docItem.data(),
+          });
         });
-      });
 
-      setOrders(list);
-    });
+        setOrders(list);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -55,31 +62,80 @@ function DriverPanel() {
 
   useEffect(() => {
     const q = query(
-  collection(db, "products"),
-  orderBy("createdAt", "desc")
-);
+      collection(db, "products"),
+      orderBy("createdAt", "desc")
+    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = [];
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = [];
 
-      snapshot.forEach((docItem) => {
-        list.push({
-          firebaseId: docItem.id,
-          ...docItem.data(),
+        snapshot.forEach((docItem) => {
+          list.push({
+            firebaseId: docItem.id,
+            ...docItem.data(),
+          });
         });
-      });
 
-      setProducts(list);
-    });
+        setProducts(list);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
+  /* HAZIRLANIYOR */
+
+  const preparingOrder = async (
+    firebaseId
+  ) => {
+    try {
+      const orderRef = doc(
+        db,
+        "orders",
+        firebaseId
+      );
+
+      await updateDoc(orderRef, {
+        status: "Hazırlanıyor",
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  /* YOLDA */
+
+  const onRoadOrder = async (
+    firebaseId
+  ) => {
+    try {
+      const orderRef = doc(
+        db,
+        "orders",
+        firebaseId
+      );
+
+      await updateDoc(orderRef, {
+        status: "Yolda",
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   /* TESLİM */
 
-  const completeOrder = async (firebaseId) => {
+  const completeOrder = async (
+    firebaseId
+  ) => {
     try {
-      const orderRef = doc(db, "orders", firebaseId);
+      const orderRef = doc(
+        db,
+        "orders",
+        firebaseId
+      );
 
       await updateDoc(orderRef, {
         status: "Teslim Edildi",
@@ -113,7 +169,15 @@ function DriverPanel() {
 
   /* ÜRÜN SİL */
 
-  const deleteProduct = async (firebaseId) => {
+  const deleteProduct = async (
+    firebaseId
+  ) => {
+    const confirmDelete = window.confirm(
+      "Ürünü silmek istediğinize emin misiniz?"
+    );
+
+    if (!confirmDelete) return;
+
     try {
       await deleteDoc(
         doc(db, "products", firebaseId)
@@ -126,13 +190,17 @@ function DriverPanel() {
   /* AKTİF */
 
   const activeOrders = orders.filter(
-    (item) => item.status === "Aktif"
+    (item) =>
+      item.status === "Aktif" ||
+      item.status === "Hazırlanıyor" ||
+      item.status === "Yolda"
   );
 
   /* TESLİM */
 
   const completedOrders = orders.filter(
-    (item) => item.status === "Teslim Edildi"
+    (item) =>
+      item.status === "Teslim Edildi"
   );
 
   /* TOPLAM */
@@ -164,7 +232,9 @@ function DriverPanel() {
       style={{
         backgroundColor: "#f4f7fb",
         minHeight: "100vh",
-        padding: "20px",
+        padding: isMobile
+          ? "14px"
+          : "20px",
         fontFamily: "Arial",
       }}
     >
@@ -175,7 +245,9 @@ function DriverPanel() {
           textAlign: "center",
           color: "#0B63C9",
           marginBottom: "30px",
-          fontSize: "38px",
+          fontSize: isMobile
+            ? "28px"
+            : "38px",
           fontWeight: "800",
         }}
       >
@@ -187,103 +259,58 @@ function DriverPanel() {
       <div
         style={{
           display: "flex",
-          gap: "15px",
+          gap: "12px",
           justifyContent: "center",
           flexWrap: "wrap",
           marginBottom: "35px",
         }}
       >
-        <button
-          onClick={() =>
-            setActiveTab("orders")
-          }
-          style={{
-            padding: "14px 22px",
-            borderRadius: "14px",
-            border: "none",
-            backgroundColor:
-              activeTab === "orders"
-                ? "#0B63C9"
-                : "#fff",
-            color:
-              activeTab === "orders"
-                ? "#fff"
-                : "#111",
-            fontWeight: "700",
-            cursor: "pointer",
-          }}
-        >
-          Aktif Siparişler
-        </button>
-
-        <button
-          onClick={() =>
-            setActiveTab("summary")
-          }
-          style={{
-            padding: "14px 22px",
-            borderRadius: "14px",
-            border: "none",
-            backgroundColor:
-              activeTab === "summary"
-                ? "#0B63C9"
-                : "#fff",
-            color:
-              activeTab === "summary"
-                ? "#fff"
-                : "#111",
-            fontWeight: "700",
-            cursor: "pointer",
-          }}
-        >
-          Günlük Özet
-        </button>
-
-        <button
-          onClick={() =>
-            setActiveTab("products")
-          }
-          style={{
-            padding: "14px 22px",
-            borderRadius: "14px",
-            border: "none",
-            backgroundColor:
-              activeTab === "products"
-                ? "#0B63C9"
-                : "#fff",
-            color:
-              activeTab === "products"
-                ? "#fff"
-                : "#111",
-            fontWeight: "700",
-            cursor: "pointer",
-          }}
-        >
-          Ürün Yönetimi
-        </button>
-
-        <button
-          onClick={() =>
-            setActiveTab("completed")
-          }
-          style={{
-            padding: "14px 22px",
-            borderRadius: "14px",
-            border: "none",
-            backgroundColor:
-              activeTab === "completed"
-                ? "green"
-                : "#fff",
-            color:
-              activeTab === "completed"
-                ? "#fff"
-                : "#111",
-            fontWeight: "700",
-            cursor: "pointer",
-          }}
-        >
-          Teslim Edilenler
-        </button>
+        {[
+          {
+            key: "orders",
+            label: "Aktif Siparişler",
+          },
+          {
+            key: "summary",
+            label: "Günlük Özet",
+          },
+          {
+            key: "products",
+            label: "Ürün Yönetimi",
+          },
+          {
+            key: "completed",
+            label: "Teslim Edilenler",
+          },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() =>
+              setActiveTab(tab.key)
+            }
+            style={{
+              padding: isMobile
+                ? "12px 16px"
+                : "14px 22px",
+              borderRadius: "14px",
+              border: "none",
+              backgroundColor:
+                activeTab === tab.key
+                  ? "#0B63C9"
+                  : "#fff",
+              color:
+                activeTab === tab.key
+                  ? "#fff"
+                  : "#111",
+              fontWeight: "700",
+              cursor: "pointer",
+              boxShadow:
+                "0 4px 10px rgba(0,0,0,0.06)",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* AKTİF SİPARİŞLER */}
@@ -295,38 +322,90 @@ function DriverPanel() {
             margin: "0 auto",
           }}
         >
+          {activeOrders.length === 0 && (
+            <div
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "22px",
+                padding: "30px",
+                textAlign: "center",
+                fontWeight: "700",
+              }}
+            >
+              Aktif sipariş yok.
+            </div>
+          )}
+
           {activeOrders.map((order) => (
             <div
               key={order.firebaseId}
               style={{
                 backgroundColor: "#fff",
-                borderRadius: "22px",
-                padding: "24px",
-                marginBottom: "25px",
+                borderRadius: "24px",
+                padding: isMobile
+                  ? "18px"
+                  : "24px",
+                marginBottom: "24px",
                 boxShadow:
-                  "0 4px 14px rgba(0,0,0,0.08)",
+                  "0 6px 18px rgba(0,0,0,0.08)",
               }}
             >
               <div
                 style={{
                   backgroundColor: "#f5f7fb",
-                  borderRadius: "14px",
-                  padding: "14px",
+                  borderRadius: "16px",
+                  padding: "16px",
                   marginBottom: "20px",
                 }}
               >
-                <h3
+                <div
                   style={{
-                    marginBottom: "10px",
-                    fontSize: "24px",
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "10px",
                   }}
                 >
-                  {order.marketName}
-                </h3>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: isMobile
+                        ? "22px"
+                        : "26px",
+                    }}
+                  >
+                    {order.marketName}
+                  </h3>
+
+                  <div
+                    style={{
+                      backgroundColor:
+                        order.status ===
+                        "Hazırlanıyor"
+                          ? "#f59e0b"
+                          : order.status ===
+                            "Yolda"
+                          ? "#2563eb"
+                          : "#16a34a",
+                      color: "#fff",
+                      padding:
+                        "8px 14px",
+                      borderRadius: "999px",
+                      fontWeight: "700",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {order.status}
+                  </div>
+                </div>
 
                 <p
                   style={{
                     color: "#666",
+                    marginTop: "12px",
+                    marginBottom: 0,
                   }}
                 >
                   Sipariş Tarihi:
@@ -342,46 +421,116 @@ function DriverPanel() {
                 </p>
               </div>
 
-              {order.orders.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      "space-between",
-                    padding: "14px",
-                    borderRadius: "12px",
-                    backgroundColor: "#fafafa",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <span>{item.title}</span>
+              {order.orders.map(
+                (item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems: "center",
+                      padding: "16px",
+                      borderRadius: "16px",
+                      backgroundColor:
+                        "#fafafa",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: "600",
+                      }}
+                    >
+                      {item.title}
+                    </span>
 
-                  <strong>
-                    {item.quantity} adet
-                  </strong>
-                </div>
-              ))}
+                    <strong
+                      style={{
+                        color: "#0B63C9",
+                        fontSize: "17px",
+                      }}
+                    >
+                      {item.quantity} adet
+                    </strong>
+                  </div>
+                )
+              )}
 
-              <button
-                onClick={() =>
-                  completeOrder(order.firebaseId)
-                }
+              <div
                 style={{
-                  width: "100%",
-                  marginTop: "20px",
-                  backgroundColor: "green",
-                  color: "#fff",
-                  border: "none",
-                  padding: "16px",
-                  borderRadius: "14px",
-                  fontSize: "18px",
-                  fontWeight: "700",
-                  cursor: "pointer",
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  marginTop: "22px",
                 }}
               >
-                Teslim Edildi
-              </button>
+                <button
+                  onClick={() =>
+                    preparingOrder(
+                      order.firebaseId
+                    )
+                  }
+                  style={{
+                    flex: 1,
+                    minWidth: "150px",
+                    backgroundColor:
+                      "#f59e0b",
+                    color: "#fff",
+                    border: "none",
+                    padding: "16px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  Hazırlanıyor
+                </button>
+
+                <button
+                  onClick={() =>
+                    onRoadOrder(
+                      order.firebaseId
+                    )
+                  }
+                  style={{
+                    flex: 1,
+                    minWidth: "150px",
+                    backgroundColor:
+                      "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    padding: "16px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  Yolda
+                </button>
+
+                <button
+                  onClick={() =>
+                    completeOrder(
+                      order.firebaseId
+                    )
+                  }
+                  style={{
+                    flex: 1,
+                    minWidth: "150px",
+                    backgroundColor:
+                      "#16a34a",
+                    color: "#fff",
+                    border: "none",
+                    padding: "16px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  Teslim Edildi
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -426,7 +575,8 @@ function DriverPanel() {
                 style={{
                   flex: 1,
                   minWidth: "220px",
-                  backgroundColor: "#f5f7fb",
+                  backgroundColor:
+                    "#f5f7fb",
                   borderRadius: "16px",
                   padding: "20px",
                 }}
@@ -447,7 +597,8 @@ function DriverPanel() {
                 style={{
                   flex: 1,
                   minWidth: "220px",
-                  backgroundColor: "#f5f7fb",
+                  backgroundColor:
+                    "#f5f7fb",
                   borderRadius: "16px",
                   padding: "20px",
                 }}
@@ -465,7 +616,9 @@ function DriverPanel() {
               </div>
             </div>
 
-            {Object.entries(productTotals).map(
+            {Object.entries(
+              productTotals
+            ).map(
               ([title, quantity]) => (
                 <div
                   key={title}
@@ -475,7 +628,8 @@ function DriverPanel() {
                       "space-between",
                     padding: "16px",
                     borderRadius: "14px",
-                    backgroundColor: "#fafafa",
+                    backgroundColor:
+                      "#fafafa",
                     marginBottom: "12px",
                   }}
                 >
@@ -527,14 +681,19 @@ function DriverPanel() {
               placeholder="Ürün Adı"
               value={newTitle}
               onChange={(e) =>
-                setNewTitle(e.target.value)
+                setNewTitle(
+                  e.target.value
+                )
               }
               style={{
                 width: "100%",
                 padding: "16px",
                 marginBottom: "15px",
                 borderRadius: "14px",
-                border: "1px solid #ddd",
+                border:
+                  "1px solid #ddd",
+                boxSizing:
+                  "border-box",
               }}
             />
 
@@ -552,7 +711,10 @@ function DriverPanel() {
                 padding: "16px",
                 marginBottom: "15px",
                 borderRadius: "14px",
-                border: "1px solid #ddd",
+                border:
+                  "1px solid #ddd",
+                boxSizing:
+                  "border-box",
               }}
             />
 
@@ -561,14 +723,19 @@ function DriverPanel() {
               placeholder="Görsel Linki"
               value={newImage}
               onChange={(e) =>
-                setNewImage(e.target.value)
+                setNewImage(
+                  e.target.value
+                )
               }
               style={{
                 width: "100%",
                 padding: "16px",
                 marginBottom: "15px",
                 borderRadius: "14px",
-                border: "1px solid #ddd",
+                border:
+                  "1px solid #ddd",
+                boxSizing:
+                  "border-box",
               }}
             />
 
@@ -576,7 +743,8 @@ function DriverPanel() {
               onClick={addProduct}
               style={{
                 width: "100%",
-                backgroundColor: "#0B63C9",
+                backgroundColor:
+                  "#0B63C9",
                 color: "#fff",
                 border: "none",
                 padding: "16px",
@@ -597,9 +765,12 @@ function DriverPanel() {
                   justifyContent:
                     "space-between",
                   alignItems: "center",
-                  backgroundColor: "#fafafa",
-                  padding: "16px",
-                  borderRadius: "14px",
+                  gap: "15px",
+                  flexWrap: "wrap",
+                  backgroundColor:
+                    "#fafafa",
+                  padding: "18px",
+                  borderRadius: "16px",
                   marginBottom: "12px",
                 }}
               >
@@ -611,10 +782,12 @@ function DriverPanel() {
                   <p
                     style={{
                       color: "#666",
-                      marginTop: "5px",
+                      marginTop: "6px",
                     }}
                   >
-                    {product.description}
+                    {
+                      product.description
+                    }
                   </p>
                 </div>
 
@@ -625,11 +798,13 @@ function DriverPanel() {
                     )
                   }
                   style={{
-                    backgroundColor: "red",
+                    backgroundColor:
+                      "#dc2626",
                     color: "#fff",
                     border: "none",
-                    padding: "12px 18px",
-                    borderRadius: "10px",
+                    padding:
+                      "12px 18px",
+                    borderRadius: "12px",
                     cursor: "pointer",
                     fontWeight: "700",
                   }}
@@ -665,7 +840,8 @@ function DriverPanel() {
             >
               <div
                 style={{
-                  backgroundColor: "#f5f7fb",
+                  backgroundColor:
+                    "#f5f7fb",
                   borderRadius: "14px",
                   padding: "14px",
                   marginBottom: "20px",
@@ -686,7 +862,8 @@ function DriverPanel() {
                 >
                   Teslim Tarihi:
                   {" "}
-                  {order.deliveredAt?.seconds
+                  {order.deliveredAt
+                    ?.seconds
                     ? new Date(
                         order.deliveredAt
                           .seconds * 1000
@@ -697,26 +874,32 @@ function DriverPanel() {
                 </p>
               </div>
 
-              {order.orders.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      "space-between",
-                    padding: "14px",
-                    borderRadius: "12px",
-                    backgroundColor: "#fafafa",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <span>{item.title}</span>
+              {order.orders.map(
+                (item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      padding: "14px",
+                      borderRadius:
+                        "12px",
+                      backgroundColor:
+                        "#fafafa",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <span>
+                      {item.title}
+                    </span>
 
-                  <strong>
-                    {item.quantity} adet
-                  </strong>
-                </div>
-              ))}
+                    <strong>
+                      {item.quantity} adet
+                    </strong>
+                  </div>
+                )
+              )}
             </div>
           ))}
         </div>
