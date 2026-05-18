@@ -18,7 +18,9 @@ import {
 } from "firebase/firestore";
 
 function App() {
-  const [marketName, setMarketName] = useState("");
+  const [marketName, setMarketName] = useState(
+  localStorage.getItem("marketName") || ""
+);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
