@@ -65,51 +65,61 @@ function App() {
   /* PRODUCTS */
 
   useEffect(() => {
-    const q = query(
-  collection(db, "orders"),
-  where("customerId", "==", customerId)
-);
+  const q = query(
+    collection(db, "products"),
+    orderBy("createdAt", "desc")
+  );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = [];
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const list = [];
 
-      snapshot.forEach((docItem) => {
-        list.push({
-          firebaseId: docItem.id,
-          ...docItem.data(),
-        });
+    snapshot.forEach((docItem) => {
+      list.push({
+        firebaseId: docItem.id,
+        ...docItem.data(),
       });
-
-      setProducts(list);
     });
 
-    return () => unsubscribe();
-  }, []);
+    setProducts(list);
+  });
+
+  return () => unsubscribe();
+}, []);
 
   /* MY ORDERS */
 
   useEffect(() => {
-    const q = query(
-      collection(db, "orders"),
-      where("customerId", "==", customerId),
-      orderBy("createdAt", "desc")
-    );
+  if (!customerId) return;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = [];
+  const q = query(
+    collection(db, "orders"),
+    where("customerId", "==", customerId)
+  );
 
-      snapshot.forEach((docItem) => {
-        list.push({
-          firebaseId: docItem.id,
-          ...docItem.data(),
-        });
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const list = [];
+
+    snapshot.forEach((docItem) => {
+      list.push({
+        firebaseId: docItem.id,
+        ...docItem.data(),
       });
-
-      setMyOrders(list);
     });
 
-    return () => unsubscribe();
-  }, [customerId]);
+    list.sort((a, b) => {
+      if (!a.createdAt || !b.createdAt) return 0;
+
+      return (
+        b.createdAt.seconds -
+        a.createdAt.seconds
+      );
+    });
+
+    setMyOrders(list);
+  });
+
+  return () => unsubscribe();
+}, [customerId]);
 
   /* ADD PRODUCT */
 
