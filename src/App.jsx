@@ -10,7 +10,6 @@ import {
   query,
   orderBy,
   where,
-  getDocs,
   updateDoc,
   doc,
   onSnapshot,
@@ -60,66 +59,70 @@ function App() {
   const [activeTab, setActiveTab] =
     useState("products");
 
+  const [editingOrderId, setEditingOrderId] =
+    useState(null);
+
   const isMobile = window.innerWidth < 700;
 
   /* PRODUCTS */
 
   useEffect(() => {
-  const q = query(
-    collection(db, "products"),
-    orderBy("createdAt", "desc")
-  );
+    const q = query(
+      collection(db, "products"),
+      orderBy("createdAt", "desc")
+    );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const list = [];
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = [];
 
-    snapshot.forEach((docItem) => {
-      list.push({
-        firebaseId: docItem.id,
-        ...docItem.data(),
+      snapshot.forEach((docItem) => {
+        list.push({
+          firebaseId: docItem.id,
+          ...docItem.data(),
+        });
       });
+
+      setProducts(list);
     });
 
-    setProducts(list);
-  });
-
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
   /* MY ORDERS */
 
   useEffect(() => {
-  if (!customerId) return;
+    if (!customerId) return;
 
-  const q = query(
-    collection(db, "orders"),
-    where("customerId", "==", customerId)
-  );
+    const q = query(
+      collection(db, "orders"),
+      where("customerId", "==", customerId)
+    );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const list = [];
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = [];
 
-    snapshot.forEach((docItem) => {
-      list.push({
-        firebaseId: docItem.id,
-        ...docItem.data(),
+      snapshot.forEach((docItem) => {
+        list.push({
+          firebaseId: docItem.id,
+          ...docItem.data(),
+        });
       });
+
+      list.sort((a, b) => {
+        if (!a.createdAt || !b.createdAt)
+          return 0;
+
+        return (
+          b.createdAt.seconds -
+          a.createdAt.seconds
+        );
+      });
+
+      setMyOrders(list);
     });
 
-    list.sort((a, b) => {
-      if (!a.createdAt || !b.createdAt) return 0;
-
-      return (
-        b.createdAt.seconds -
-        a.createdAt.seconds
-      );
-    });
-
-    setMyOrders(list);
-  });
-
-  return () => unsubscribe();
-}, [customerId]);
+    return () => unsubscribe();
+  }, [customerId]);
 
   /* ADD PRODUCT */
 
@@ -209,19 +212,10 @@ function App() {
     }
   };
 
-  /* EDIT ORDER */
+  /* EDIT MODE */
 
-  const editOrder = (order) => {
-    if (order.status !== "Aktif") return;
-
-    setOrders(order.orders);
-
-    setActiveTab("products");
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+  const editOrder = (firebaseId) => {
+    setEditingOrderId(firebaseId);
 
     setSuccessMessage(
       "✏️ Sipariş düzenleme modunda"
@@ -229,12 +223,136 @@ function App() {
 
     setTimeout(() => {
       setSuccessMessage("");
-    }, 2500);
+    }, 2000);
   };
 
-  /* CANCEL ORDER */
+  /* INCREASE */
 
-  const cancelOrder = async (firebaseId) => {
+  const increaseQuantity = (
+    orderId,
+    itemIndex
+  ) => {
+    setMyOrders((prev) =>
+      prev.map((order) => {
+        if (order.firebaseId !== orderId)
+          return order;
+
+        const updatedOrders = [
+          ...order.orders,
+        ];
+
+        updatedOrders[itemIndex].quantity =
+          Number(
+            updatedOrders[itemIndex].quantity
+          ) + 1;
+
+        return {
+          ...order,
+          orders: updatedOrders,
+        };
+      })
+    );
+  };
+
+  /* DECREASE */
+
+  const decreaseQuantity = (
+    orderId,
+    itemIndex
+  ) => {
+    setMyOrders((prev) =>
+      prev.map((order) => {
+        if (order.firebaseId !== orderId)
+          return order;
+
+        const updatedOrders = [
+          ...order.orders,
+        ];
+
+        if (
+          updatedOrders[itemIndex].quantity > 1
+        ) {
+          updatedOrders[itemIndex].quantity =
+            Number(
+              updatedOrders[itemIndex]
+                .quantity
+            ) - 1;
+        }
+
+        return {
+          ...order,
+          orders: updatedOrders,
+        };
+      })
+    );
+  };
+
+  /* REMOVE ITEM */
+
+  const removeItem = (
+    orderId,
+    itemIndex
+  ) => {
+    setMyOrders((prev) =>
+      prev.map((order) => {
+        if (order.firebaseId !== orderId)
+          return order;
+
+        const updatedOrders =
+          order.orders.filter(
+            (_, index) =>
+              index !== itemIndex
+          );
+
+        return {
+          ...order,
+          orders: updatedOrders,
+        };
+      })
+    );
+  };
+
+  /* SAVE */
+
+  const saveEditedOrder = async (
+    order
+  ) => {
+    try {
+      const totalQuantity =
+        order.orders.reduce(
+          (total, item) =>
+            total +
+            Number(item.quantity),
+          0
+        );
+
+      await updateDoc(
+        doc(db, "orders", order.firebaseId),
+        {
+          orders: order.orders,
+          totalQuantity,
+        }
+      );
+
+      setEditingOrderId(null);
+
+      setSuccessMessage(
+        "✅ Sipariş güncellendi"
+      );
+
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 2500);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  /* CANCEL */
+
+  const cancelOrder = async (
+    firebaseId
+  ) => {
     try {
       await deleteDoc(
         doc(db, "orders", firebaseId)
@@ -261,8 +379,6 @@ function App() {
         fontFamily: "Arial",
       }}
     >
-      {/* MARKET */}
-
       <div
         style={{
           maxWidth: "500px",
@@ -283,21 +399,14 @@ function App() {
           }}
           style={{
             width: "100%",
-            padding: isMobile
-              ? "15px"
-              : "18px",
+            padding: "16px",
             borderRadius: "16px",
             border: "1px solid #ddd",
-            fontSize: isMobile
-              ? "16px"
-              : "18px",
+            fontSize: "16px",
             boxSizing: "border-box",
-            backgroundColor: "#fff",
           }}
         />
       </div>
-
-      {/* TITLE */}
 
       <h1
         style={{
@@ -306,7 +415,6 @@ function App() {
           fontSize: isMobile
             ? "28px"
             : "42px",
-          lineHeight: "1.1",
           marginBottom: "22px",
           fontWeight: "900",
         }}
@@ -314,15 +422,12 @@ function App() {
         AKMEMBA TOPTAN SİPARİŞ
       </h1>
 
-      {/* TABS */}
-
       <div
         style={{
           display: "flex",
           justifyContent: "center",
           gap: "10px",
           marginBottom: "25px",
-          flexWrap: "wrap",
         }}
       >
         <button
@@ -342,7 +447,6 @@ function App() {
                 ? "#fff"
                 : "#111",
             fontWeight: "700",
-            cursor: "pointer",
           }}
         >
           Ürünler
@@ -365,14 +469,11 @@ function App() {
                 ? "#fff"
                 : "#111",
             fontWeight: "700",
-            cursor: "pointer",
           }}
         >
           Siparişlerim
         </button>
       </div>
-
-      {/* SUCCESS */}
 
       {successMessage && (
         <div
@@ -391,23 +492,15 @@ function App() {
         </div>
       )}
 
-      {/* PRODUCTS PAGE */}
-
       {activeTab === "products" && (
         <>
-          {/* ORDER SUMMARY */}
-
           <div
             style={{
               maxWidth: "900px",
               margin: "0 auto 24px auto",
               backgroundColor: "#fff",
               borderRadius: "22px",
-              padding: isMobile
-                ? "18px"
-                : "25px",
-              boxShadow:
-                "0 4px 14px rgba(0,0,0,0.08)",
+              padding: "22px",
             }}
           >
             <h2
@@ -472,7 +565,6 @@ function App() {
                     borderRadius: "16px",
                     fontSize: "18px",
                     fontWeight: "700",
-                    cursor: "pointer",
                   }}
                 >
                   {loading
@@ -482,8 +574,6 @@ function App() {
               </>
             )}
           </div>
-
-          {/* PRODUCTS */}
 
           <div
             style={{
@@ -497,7 +587,6 @@ function App() {
                 : "25px",
               maxWidth: "1400px",
               margin: "0 auto",
-              alignItems: "start",
             }}
           >
             {products.map((product) => (
@@ -522,8 +611,6 @@ function App() {
         </>
       )}
 
-      {/* ORDERS PAGE */}
-
       {activeTab === "orders" && (
         <div
           style={{
@@ -531,137 +618,182 @@ function App() {
             margin: "0 auto",
           }}
         >
-          {myOrders.length === 0 ? (
+          {myOrders.map((order) => (
             <div
+              key={order.firebaseId}
               style={{
                 backgroundColor: "#fff",
                 borderRadius: "22px",
-                padding: "25px",
-                textAlign: "center",
+                padding: "20px",
+                marginBottom: "20px",
               }}
             >
-              Henüz siparişiniz yok.
-            </div>
-          ) : (
-            myOrders.map((order) => (
               <div
-                key={order.firebaseId}
                 style={{
-                  backgroundColor: "#fff",
-                  borderRadius: "22px",
-                  padding: "20px",
-                  marginBottom: "20px",
-                  boxShadow:
-                    "0 4px 14px rgba(0,0,0,0.08)",
+                  display: "flex",
+                  justifyContent:
+                    "space-between",
+                  marginBottom: "18px",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      "space-between",
-                    marginBottom: "18px",
-                  }}
-                >
-                  <strong>
-                    {order.status}
-                  </strong>
+                <strong>
+                  {order.status}
+                </strong>
 
-                  <strong>
-                    {order.totalQuantity}
-                    {" "}adet
-                  </strong>
-                </div>
+                <strong>
+                  {order.totalQuantity} adet
+                </strong>
+              </div>
 
-                {order.orders.map(
-                  (item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: "flex",
-                        justifyContent:
-                          "space-between",
-                        marginBottom: "10px",
-                        borderBottom:
-                          "1px solid #eee",
-                        paddingBottom: "8px",
-                      }}
-                    >
-                      <span>
+              {order.orders.map(
+                (item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems: "center",
+                      marginBottom: "12px",
+                      borderBottom:
+                        "1px solid #eee",
+                      paddingBottom: "10px",
+                    }}
+                  >
+                    <div>
+                      <div>
                         {item.title}
-                      </span>
+                      </div>
 
                       <strong>
-                        {item.quantity}
+                        {item.quantity} adet
                       </strong>
                     </div>
-                  )
-                )}
 
-                <div
+                    {editingOrderId ===
+                      order.firebaseId && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "6px",
+                        }}
+                      >
+                        <button
+                          onClick={() =>
+                            decreaseQuantity(
+                              order.firebaseId,
+                              index
+                            )
+                          }
+                        >
+                          -
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            increaseQuantity(
+                              order.firebaseId,
+                              index
+                            )
+                          }
+                        >
+                          +
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            removeItem(
+                              order.firebaseId,
+                              index
+                            )
+                          }
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "18px",
+                }}
+              >
+                <button
+                  disabled={
+                    order.status !== "Aktif"
+                  }
+                  onClick={() =>
+                    editOrder(
+                      order.firebaseId
+                    )
+                  }
                   style={{
-                    display: "flex",
-                    gap: "10px",
-                    marginTop: "18px",
+                    flex: 1,
+                    backgroundColor:
+                      "#0B63C9",
+                    color: "#fff",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
                   }}
                 >
-                  <button
-                    disabled={
-                      order.status !==
-                      "Aktif"
-                    }
-                    onClick={() =>
-                      editOrder(order)
-                    }
-                    style={{
-                      flex: 1,
-                      backgroundColor:
-                        order.status !==
-                        "Aktif"
-                          ? "#ccc"
-                          : "#0B63C9",
-                      color: "#fff",
-                      border: "none",
-                      padding: "14px",
-                      borderRadius:
-                        "14px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Düzenle
-                  </button>
+                  Düzenle
+                </button>
 
-                  <button
-                    disabled={
-                      order.status !==
-                      "Aktif"
-                    }
-                    onClick={() =>
-                      cancelOrder(
-                        order.firebaseId
-                      )
-                    }
-                    style={{
-                      flex: 1,
-                      backgroundColor:
-                        order.status !==
-                        "Aktif"
-                          ? "#ccc"
-                          : "#dc2626",
-                      color: "#fff",
-                      border: "none",
-                      padding: "14px",
-                      borderRadius:
-                        "14px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    İptal Et
-                  </button>
-                </div>
+                <button
+                  disabled={
+                    order.status !== "Aktif"
+                  }
+                  onClick={() =>
+                    cancelOrder(
+                      order.firebaseId
+                    )
+                  }
+                  style={{
+                    flex: 1,
+                    backgroundColor:
+                      "#dc2626",
+                    color: "#fff",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                  }}
+                >
+                  İptal Et
+                </button>
               </div>
-            ))
-          )}
+
+              {editingOrderId ===
+                order.firebaseId && (
+                <button
+                  onClick={() =>
+                    saveEditedOrder(order)
+                  }
+                  style={{
+                    width: "100%",
+                    marginTop: "14px",
+                    backgroundColor:
+                      "#16a34a",
+                    color: "#fff",
+                    border: "none",
+                    padding: "16px",
+                    borderRadius: "14px",
+                    fontWeight: "700",
+                    fontSize: "16px",
+                  }}
+                >
+                  Kaydet
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
