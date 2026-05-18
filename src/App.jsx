@@ -66,9 +66,9 @@ function App() {
 
   useEffect(() => {
     const q = query(
-      collection(db, "products"),
-      orderBy("createdAt", "desc")
-    );
+  collection(db, "orders"),
+  where("customerId", "==", customerId)
+);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = [];
