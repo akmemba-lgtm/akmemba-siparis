@@ -212,6 +212,58 @@ function App() {
     }
   };
 
+  /* STATUS COLORS */
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Aktif":
+        return "#16a34a";
+
+      case "Hazırlanıyor":
+        return "#f59e0b";
+
+      case "Yolda":
+        return "#2563eb";
+
+      case "Teslim Edildi":
+        return "#6b7280";
+
+      default:
+        return "#111";
+    }
+  };
+
+  /* STATUS TEXT */
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case "Aktif":
+        return "Siparişiniz düzenlenebilir";
+
+      case "Hazırlanıyor":
+        return "Sipariş hazırlanıyor";
+
+      case "Yolda":
+        return "Sipariş yolda";
+
+      case "Teslim Edildi":
+        return "Sipariş teslim edildi";
+
+      default:
+        return "";
+    }
+  };
+
+  /* ORDER LOCK */
+
+  const isOrderLocked = (status) => {
+    return (
+      status === "Hazırlanıyor" ||
+      status === "Yolda" ||
+      status === "Teslim Edildi"
+    );
+  };
+
   /* EDIT MODE */
 
   const editOrder = (firebaseId) => {
@@ -294,6 +346,8 @@ function App() {
     itemIndex,
     value
   ) => {
+    if (!value || value < 1) return;
+
     setMyOrders((prev) =>
       prev.map((order) => {
         if (order.firebaseId !== orderId)
@@ -365,6 +419,7 @@ function App() {
         {
           orders: order.orders,
           totalQuantity,
+          updatedAt: serverTimestamp(),
         }
       );
 
@@ -420,6 +475,8 @@ function App() {
         fontFamily: "Arial",
       }}
     >
+      {/* MARKET */}
+
       <div
         style={{
           maxWidth: "500px",
@@ -449,6 +506,8 @@ function App() {
         />
       </div>
 
+      {/* TITLE */}
+
       <h1
         style={{
           textAlign: "center",
@@ -462,6 +521,8 @@ function App() {
       >
         AKMEMBA TOPTAN SİPARİŞ
       </h1>
+
+      {/* TABS */}
 
       <div
         style={{
@@ -516,6 +577,8 @@ function App() {
         </button>
       </div>
 
+      {/* SUCCESS */}
+
       {successMessage && (
         <div
           style={{
@@ -532,6 +595,8 @@ function App() {
           {successMessage}
         </div>
       )}
+
+      {/* PRODUCTS PAGE */}
 
       {activeTab === "products" && (
         <>
@@ -616,6 +681,8 @@ function App() {
             )}
           </div>
 
+          {/* PRODUCTS */}
+
           <div
             style={{
               display: "grid",
@@ -652,6 +719,8 @@ function App() {
         </>
       )}
 
+      {/* ORDERS PAGE */}
+
       {activeTab === "orders" && (
         <div
           style={{
@@ -671,23 +740,42 @@ function App() {
                   "0 6px 20px rgba(0,0,0,0.06)",
               }}
             >
+              {/* HEADER */}
+
               <div
                 style={{
                   display: "flex",
                   justifyContent:
                     "space-between",
-                  marginBottom: "20px",
                   alignItems: "center",
+                  marginBottom: "18px",
+                  gap: "10px",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: "800",
-                    color: "#111827",
-                  }}
-                >
-                  {order.status}
+                <div>
+                  <div
+                    style={{
+                      fontWeight: "800",
+                      fontSize: "20px",
+                      color: getStatusColor(
+                        order.status
+                      ),
+                    }}
+                  >
+                    {order.status}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "5px",
+                      fontSize: "14px",
+                      color: "#6b7280",
+                    }}
+                  >
+                    {getStatusText(
+                      order.status
+                    )}
+                  </div>
                 </div>
 
                 <div
@@ -700,12 +788,44 @@ function App() {
                     borderRadius:
                       "12px",
                     fontWeight: "700",
+                    whiteSpace:
+                      "nowrap",
                   }}
                 >
                   {order.totalQuantity}
                   {" "}adet
                 </div>
               </div>
+
+              {/* LOCK MESSAGE */}
+
+              {isOrderLocked(
+                order.status
+              ) && (
+                <div
+                  style={{
+                    backgroundColor:
+                      "#fff7ed",
+                    border:
+                      "1px solid #fdba74",
+                    color: "#9a3412",
+                    padding: "14px",
+                    borderRadius:
+                      "14px",
+                    marginBottom:
+                      "18px",
+                    fontWeight: "600",
+                    fontSize: "14px",
+                  }}
+                >
+                  🔒 Bu sipariş artık
+                  düzenlenemez çünkü
+                  hazırlık / teslimat
+                  süreci başladı.
+                </div>
+              )}
+
+              {/* PRODUCTS */}
 
               {order.orders.map(
                 (item, index) => (
@@ -746,9 +866,13 @@ function App() {
                       </div>
 
                       {editingOrderId ===
-                      order.firebaseId ? (
+                        order.firebaseId &&
+                      !isOrderLocked(
+                        order.status
+                      ) ? (
                         <input
                           type="number"
+                          min="1"
                           value={
                             item.quantity
                           }
@@ -797,7 +921,10 @@ function App() {
                     </div>
 
                     {editingOrderId ===
-                      order.firebaseId && (
+                      order.firebaseId &&
+                      !isOrderLocked(
+                        order.status
+                      ) && (
                       <div
                         style={{
                           display:
@@ -897,87 +1024,97 @@ function App() {
                 )
               )}
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  marginTop: "18px",
-                }}
-              >
-                <button
-                  disabled={
-                    order.status !==
-                    "Aktif"
-                  }
-                  onClick={() =>
-                    editOrder(
-                      order.firebaseId
-                    )
-                  }
-                  style={{
-                    flex: 1,
-                    backgroundColor:
-                      "#0B63C9",
-                    color: "#fff",
-                    border: "none",
-                    padding: "16px",
-                    borderRadius:
-                      "16px",
-                    fontWeight: "800",
-                    fontSize: "16px",
-                  }}
-                >
-                  Düzenle
-                </button>
+              {/* BUTTONS */}
 
-                <button
-                  disabled={
-                    order.status !==
-                    "Aktif"
-                  }
-                  onClick={() =>
-                    cancelOrder(
-                      order.firebaseId
-                    )
-                  }
-                  style={{
-                    flex: 1,
-                    backgroundColor:
-                      "#dc2626",
-                    color: "#fff",
-                    border: "none",
-                    padding: "16px",
-                    borderRadius:
-                      "16px",
-                    fontWeight: "800",
-                    fontSize: "16px",
-                  }}
-                >
-                  İptal Et
-                </button>
-              </div>
+              {!isOrderLocked(
+                order.status
+              ) && (
+                <>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "12px",
+                      marginTop: "18px",
+                    }}
+                  >
+                    <button
+                      onClick={() =>
+                        editOrder(
+                          order.firebaseId
+                        )
+                      }
+                      style={{
+                        flex: 1,
+                        backgroundColor:
+                          "#0B63C9",
+                        color: "#fff",
+                        border: "none",
+                        padding: "16px",
+                        borderRadius:
+                          "16px",
+                        fontWeight:
+                          "800",
+                        fontSize:
+                          "16px",
+                      }}
+                    >
+                      Düzenle
+                    </button>
 
-              {editingOrderId ===
-                order.firebaseId && (
-                <button
-                  onClick={() =>
-                    saveEditedOrder(order)
-                  }
-                  style={{
-                    width: "100%",
-                    marginTop: "14px",
-                    backgroundColor:
-                      "#16a34a",
-                    color: "#fff",
-                    border: "none",
-                    padding: "18px",
-                    borderRadius: "16px",
-                    fontWeight: "800",
-                    fontSize: "18px",
-                  }}
-                >
-                  Kaydet
-                </button>
+                    <button
+                      onClick={() =>
+                        cancelOrder(
+                          order.firebaseId
+                        )
+                      }
+                      style={{
+                        flex: 1,
+                        backgroundColor:
+                          "#dc2626",
+                        color: "#fff",
+                        border: "none",
+                        padding: "16px",
+                        borderRadius:
+                          "16px",
+                        fontWeight:
+                          "800",
+                        fontSize:
+                          "16px",
+                      }}
+                    >
+                      İptal Et
+                    </button>
+                  </div>
+
+                  {editingOrderId ===
+                    order.firebaseId && (
+                    <button
+                      onClick={() =>
+                        saveEditedOrder(
+                          order
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        marginTop:
+                          "14px",
+                        backgroundColor:
+                          "#16a34a",
+                        color: "#fff",
+                        border: "none",
+                        padding: "18px",
+                        borderRadius:
+                          "16px",
+                        fontWeight:
+                          "800",
+                        fontSize:
+                          "18px",
+                      }}
+                    >
+                      Kaydet
+                    </button>
+                  )}
+                </>
               )}
             </div>
           ))}
