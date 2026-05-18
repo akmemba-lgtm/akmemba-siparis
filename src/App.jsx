@@ -287,12 +287,46 @@ function App() {
     );
   };
 
+  /* CHANGE QUANTITY */
+
+  const changeQuantity = (
+    orderId,
+    itemIndex,
+    value
+  ) => {
+    setMyOrders((prev) =>
+      prev.map((order) => {
+        if (order.firebaseId !== orderId)
+          return order;
+
+        const updatedOrders = [
+          ...order.orders,
+        ];
+
+        updatedOrders[itemIndex].quantity =
+          Number(value);
+
+        return {
+          ...order,
+          orders: updatedOrders,
+        };
+      })
+    );
+  };
+
   /* REMOVE ITEM */
 
   const removeItem = (
     orderId,
     itemIndex
   ) => {
+    const confirmDelete =
+      window.confirm(
+        "Ürünü siparişten kaldırmak istiyor musunuz?"
+      );
+
+    if (!confirmDelete) return;
+
     setMyOrders((prev) =>
       prev.map((order) => {
         if (order.firebaseId !== orderId)
@@ -353,6 +387,13 @@ function App() {
   const cancelOrder = async (
     firebaseId
   ) => {
+    const confirmCancel =
+      window.confirm(
+        "Siparişi iptal etmek istediğinize emin misiniz?"
+      );
+
+    if (!confirmCancel) return;
+
     try {
       await deleteDoc(
         doc(db, "orders", firebaseId)
@@ -623,9 +664,11 @@ function App() {
               key={order.firebaseId}
               style={{
                 backgroundColor: "#fff",
-                borderRadius: "22px",
-                padding: "20px",
-                marginBottom: "20px",
+                borderRadius: "24px",
+                padding: "22px",
+                marginBottom: "22px",
+                boxShadow:
+                  "0 6px 20px rgba(0,0,0,0.06)",
               }}
             >
               <div
@@ -633,16 +676,35 @@ function App() {
                   display: "flex",
                   justifyContent:
                     "space-between",
-                  marginBottom: "18px",
+                  marginBottom: "20px",
+                  alignItems: "center",
                 }}
               >
-                <strong>
+                <div
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: "800",
+                    color: "#111827",
+                  }}
+                >
                   {order.status}
-                </strong>
+                </div>
 
-                <strong>
-                  {order.totalQuantity} adet
-                </strong>
+                <div
+                  style={{
+                    backgroundColor:
+                      "#eff6ff",
+                    color: "#0B63C9",
+                    padding:
+                      "10px 14px",
+                    borderRadius:
+                      "12px",
+                    fontWeight: "700",
+                  }}
+                >
+                  {order.totalQuantity}
+                  {" "}adet
+                </div>
               </div>
 
               {order.orders.map(
@@ -654,28 +716,95 @@ function App() {
                       justifyContent:
                         "space-between",
                       alignItems: "center",
-                      marginBottom: "12px",
+                      gap: "12px",
+                      paddingBottom:
+                        "16px",
+                      marginBottom:
+                        "16px",
                       borderBottom:
-                        "1px solid #eee",
-                      paddingBottom: "10px",
+                        "1px solid #f1f1f1",
                     }}
                   >
-                    <div>
-                      <div>
+                    <div
+                      style={{
+                        flex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight:
+                            "700",
+                          color:
+                            "#111827",
+                          lineHeight:
+                            "1.4",
+                          marginBottom:
+                            "10px",
+                        }}
+                      >
                         {item.title}
                       </div>
 
-                      <strong>
-                        {item.quantity} adet
-                      </strong>
+                      {editingOrderId ===
+                      order.firebaseId ? (
+                        <input
+                          type="number"
+                          value={
+                            item.quantity
+                          }
+                          onChange={(
+                            e
+                          ) =>
+                            changeQuantity(
+                              order.firebaseId,
+                              index,
+                              e.target
+                                .value
+                            )
+                          }
+                          style={{
+                            width:
+                              "90px",
+                            height:
+                              "42px",
+                            borderRadius:
+                              "12px",
+                            border:
+                              "1px solid #d1d5db",
+                            textAlign:
+                              "center",
+                            fontSize:
+                              "17px",
+                            fontWeight:
+                              "700",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            color:
+                              "#0B63C9",
+                            fontWeight:
+                              "700",
+                          }}
+                        >
+                          {
+                            item.quantity
+                          }{" "}
+                          adet
+                        </div>
+                      )}
                     </div>
 
                     {editingOrderId ===
                       order.firebaseId && (
                       <div
                         style={{
-                          display: "flex",
-                          gap: "6px",
+                          display:
+                            "flex",
+                          alignItems:
+                            "center",
+                          gap: "8px",
                         }}
                       >
                         <button
@@ -685,8 +814,26 @@ function App() {
                               index
                             )
                           }
+                          style={{
+                            width:
+                              "42px",
+                            height:
+                              "42px",
+                            borderRadius:
+                              "12px",
+                            border:
+                              "none",
+                            backgroundColor:
+                              "#eef2ff",
+                            color:
+                              "#0B63C9",
+                            fontSize:
+                              "22px",
+                            fontWeight:
+                              "900",
+                          }}
                         >
-                          -
+                          −
                         </button>
 
                         <button
@@ -696,6 +843,24 @@ function App() {
                               index
                             )
                           }
+                          style={{
+                            width:
+                              "42px",
+                            height:
+                              "42px",
+                            borderRadius:
+                              "12px",
+                            border:
+                              "none",
+                            backgroundColor:
+                              "#0B63C9",
+                            color:
+                              "#fff",
+                            fontSize:
+                              "22px",
+                            fontWeight:
+                              "900",
+                          }}
                         >
                           +
                         </button>
@@ -707,6 +872,22 @@ function App() {
                               index
                             )
                           }
+                          style={{
+                            width:
+                              "42px",
+                            height:
+                              "42px",
+                            borderRadius:
+                              "12px",
+                            border:
+                              "none",
+                            backgroundColor:
+                              "#fee2e2",
+                            color:
+                              "#dc2626",
+                            fontSize:
+                              "18px",
+                          }}
                         >
                           🗑
                         </button>
@@ -719,13 +900,14 @@ function App() {
               <div
                 style={{
                   display: "flex",
-                  gap: "10px",
+                  gap: "12px",
                   marginTop: "18px",
                 }}
               >
                 <button
                   disabled={
-                    order.status !== "Aktif"
+                    order.status !==
+                    "Aktif"
                   }
                   onClick={() =>
                     editOrder(
@@ -738,9 +920,11 @@ function App() {
                       "#0B63C9",
                     color: "#fff",
                     border: "none",
-                    padding: "14px",
-                    borderRadius: "14px",
-                    fontWeight: "700",
+                    padding: "16px",
+                    borderRadius:
+                      "16px",
+                    fontWeight: "800",
+                    fontSize: "16px",
                   }}
                 >
                   Düzenle
@@ -748,7 +932,8 @@ function App() {
 
                 <button
                   disabled={
-                    order.status !== "Aktif"
+                    order.status !==
+                    "Aktif"
                   }
                   onClick={() =>
                     cancelOrder(
@@ -761,9 +946,11 @@ function App() {
                       "#dc2626",
                     color: "#fff",
                     border: "none",
-                    padding: "14px",
-                    borderRadius: "14px",
-                    fontWeight: "700",
+                    padding: "16px",
+                    borderRadius:
+                      "16px",
+                    fontWeight: "800",
+                    fontSize: "16px",
                   }}
                 >
                   İptal Et
@@ -783,10 +970,10 @@ function App() {
                       "#16a34a",
                     color: "#fff",
                     border: "none",
-                    padding: "16px",
-                    borderRadius: "14px",
-                    fontWeight: "700",
-                    fontSize: "16px",
+                    padding: "18px",
+                    borderRadius: "16px",
+                    fontWeight: "800",
+                    fontSize: "18px",
                   }}
                 >
                   Kaydet
